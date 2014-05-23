@@ -15,8 +15,9 @@
 
 var sinon = require('sinon');
 var AzureCli = require('../../lib/cli');
+var profile = require('../../lib/util/profile');
 var _ = require('underscore');
-
+var util = require('util');
 var winston = require('winston');
 require('winston-memory').Memory;
 
@@ -29,6 +30,7 @@ exports = module.exports = {
 
 function execute(cmd, cb) {
   var sandbox = sinon.sandbox.create();
+  var cli;
 
   var result = {
     text: '',
@@ -54,19 +56,21 @@ function execute(cmd, cb) {
     return cb(result);
   });
 
-  sandbox.stub(process, 'exit', function (exitStatus) {
-    result.exitStatus = exitStatus;
+  if (!process.exit.restore) {
+    sandbox.stub(process, 'exit', function (exitStatus) {
+      result.exitStatus = exitStatus;
 
-    end();
-  });
+      end();
+    });
+  }
 
   try {
-    var cli = new AzureCli();
+    profile.current = profile.load();
+    cli = new AzureCli();
     cli.parse(cmd);
   } catch(err) {
     result.errorStack = err.stack;
     result.error = err;
-
     end();
   }
 }
